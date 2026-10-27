@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spellbound Phonics - Voice Blending Magic Game</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=MedievalSharp&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Fredoka', cursive, sans-serif;
+            background: #110d21;
+            color: #fff;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        .font-magic {
+            font-family: 'MedievalSharp', cursive;
+        }
+
+        /* Parchment Background Card Texture */
+        .parchment-bg {
+            background-color: #fdf6e2;
+            background-image: radial-gradient(#e7d3a7 10%, transparent 11%), radial-gradient(#e7d3a7 10%, transparent 11%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            color: #4a2e18;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5), inset 0 0 30px rgba(184, 134, 11, 0.25);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #8b5cf6;
+            border-radius: 4px;
+        }
+
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(1.5deg); }
+        }
+
+        @keyframes bubble {
+            0% { transform: translateY(0) scale(0.7); opacity: 0; }
+            50% { opacity: 0.9; }
+            100% { transform: translateY(-60px) scale(1.2); opacity: 0; }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.6)); }
+            50% { filter: drop-shadow(0 0 35px rgba(234, 179, 8, 0.9)); }
+        }
+
+        @keyframes micPulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+
+        .animate-float { animation: float 4s ease-in-out infinite; }
+        .cauldron-glow { animation: pulseGlow 3s ease-in-out infinite; }
+        .mic-listening { animation: micPulse 1.5s infinite; }
+        .animate-shake { animation: shake 0.5s ease-in-out; }
+
+        .bubble-particle {
+            position: absolute;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(234, 179, 8, 0.6));
+            border-radius: 50%;
+            pointer-events: none;
+            animation: bubble 2.5s infinite ease-in;
+        }
+
+        /* Tile styles */
+        .tile-grab {
+            cursor: grab;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 6px 0 #3b0764, 0 10px 15px rgba(0,0,0,0.4);
+        }
+        .tile-grab:active {
+            cursor: grabbing;
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #3b0764, 0 5px 10px rgba(0,0,0,0.4);
+        }
+
+        .slot-target {
+            border: 3px dashed #a855f7;
+            background: rgba(88, 28, 135, 0.25);
+            transition: all 0.3s ease;
+        }
+        .slot-target.drag-over {
+            border-color: #facc15;
+            background: rgba(234, 179, 8, 0.2);
+            transform: scale(1.05);
+        }
+
+        /* Visual Audio Equalizer Bars */
+        .eq-bar {
+            width: 6px;
+            background: linear-gradient(to top, #3b82f6, #ec4899, #facc15);
+            border-radius: 4px;
+            transition: height 0.08s ease-out;
+            height: 6px;
+        }
+
+        .modal-blur {
+            backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-gradient-to-b from-indigo-950 via-purple-950 to-slate-950 relative overflow-hidden">
+
+    <!-- Canvas Background for Animated Magic Particles -->
+    <canvas id="magicParticleCanvas" class="absolute inset-0 pointer-events-none z-0"></canvas>
+
+    <!-- Header Navigation -->
+    <header class="relative z-10 p-4 max-w-5xl mx-auto w-full flex flex-wrap justify-between items-center gap-3">
+        <!-- Title & Icon -->
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-gradient-to-tr from-amber-400 via-amber-300 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg border-2 border-amber-300">
+                <i class="fa-solid font-magic text-2xl text-purple-950 fa-hat-wizard"></i>
+            </div>
+            <div>
+                <h1 class="font-magic text-2xl md:text-3xl font-bold bg-gradient-to-r from-amber-300 via-yellow-100 to-pink-300 bg-clip-text text-transparent drop-shadow">
+                    Phonic Voice Spellbook
+                </h1>
+                <p class="text-xs text-purple-300">Speak & Blend Magic Words</p>
+            </div>
+        </div>
+
+        <!-- Controls & Score -->
+        <div class="flex items-center gap-2 sm:gap-4 bg-purple-900/60 border border-purple-500/30 px-3 py-2 rounded-2xl backdrop-blur-md">
+            <!-- Level Dropdown -->
+            <div class="flex items-center gap-1 sm:gap-2">
+                <i class="fa-solid fa-scroll text-amber-400 text-sm"></i>
+                <select id="levelSelect" class="bg-purple-950 border border-purple-500 text-amber-200 font-semibold rounded-lg px-2 py-1 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer">
+                    <option value="1">Lvl 1: CVC Spells</option>
+                    <option value="2">Lvl 2: Digraphs & Blends</option>
+                    <option value="3">Lvl 3: Magic 'E' Vowels</option>
+                    <option value="4">Lvl 4: Master Wizard</option>
+                </select>
+            </div>
+
+            <div class="h-6 w-px bg-purple-700/50"></div>
+
+            <!-- Star Counter -->
+            <div class="flex items-center gap-1 sm:gap-2">
+                <i class="fa-solid fa-star text-amber-400 text-lg animate-pulse"></i>
+                <span id="starCount" class="font-bold text-amber-300 text-base sm:text-lg">0</span>
+            </div>
+
+            <!-- Spellbook Trigger -->
+            <button id="btnOpenBook" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-purple-950 font-bold p-2 px-3 rounded-xl shadow-md transition flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <i class="fa-solid fa-book-bookmark"></i>
+                <span class="hidden sm:inline">Codex</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Workspace -->
+    <main class="relative z-10 max-w-4xl mx-auto w-full px-4 flex-1 flex flex-col justify-center items-center gap-4 my-2">
+
+        <!-- Wizard Companion Dialogue -->
+        <div class="w-full flex flex-col sm:flex-row items-center justify-center gap-4">
+            <!-- Wizard Avatar -->
+            <div class="relative group shrink-0">
+                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-purple-600 to-indigo-800 border-4 border-amber-400 shadow-xl flex items-center justify-center overflow-hidden animate-float">
+                    <span id="wizardAvatar" class="text-4xl sm:text-5xl">🧙‍♂️</span>
+                </div>
+                <div class="absolute -bottom-1 -right-1 bg-amber-400 text-purple-950 text-xs font-bold px-2 py-0.5 rounded-full shadow">
+                    Merlin
+                </div>
+            </div>
+
+            <!-- Dialogue Bubble styled like Parchment -->
+            <div class="parchment-bg rounded-2xl p-4 max-w-lg w-full relative border-2 border-amber-600/50 text-center sm:text-left">
+                <p id="wizardSpeech" class="font-semibold text-sm sm:text-base leading-snug">
+                    "Greetings apprentice! Press the Magic Mic and speak the full blended word into the cauldron!"
+                </p>
+            </div>
+        </div>
+
+        <!-- Mode Toggle & Speech Control Panel -->
+        <div class="w-full max-w-xl bg-purple-950/70 border-2 border-purple-600/50 rounded-2xl p-3 sm:p-4 backdrop-blur-md flex flex-col items-center gap-3">
+            
+            <!-- Mode Switch Row -->
+            <div class="flex items-center justify-between w-full border-b border-purple-800/60 pb-2">
+                <div class="flex items-center gap-2">
+                    <span id="modeBadge" class="bg-amber-400 text-purple-950 text-xs font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                        <i class="fa-solid fa-microphone mr-1"></i> Voice Mode
+                    </span>
+                    <span id="speechSupportStatus" class="text-xs text-purple-300"></span>
+                </div>
+                <!-- Toggle Button -->
+                <button id="btnToggleMode" class="text-xs font-bold text-amber-300 hover:text-amber-200 underline flex items-center gap-1">
+                    <i class="fa-solid fa-arrows-rotate"></i> Switch to Tile Drag
+                </button>
+            </div>
+
+            <!-- Speech Mic Action & Live Transcript Area -->
+            <div id="voiceControlSection" class="w-full flex flex-col items-center gap-3 py-1">
+                <div class="flex items-center gap-4">
+                    <!-- Big Magic Mic Button -->
+                    <button id="btnMic" class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-rose-600 via-red-500 to-amber-400 text-white font-bold text-2xl sm:text-3xl flex items-center justify-center shadow-2xl border-4 border-amber-300 transition-all transform active:scale-95 cursor-pointer relative">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+
+                    <!-- Realtime Equalizer / Audio Waveform Feedback -->
+                    <div id="eqContainer" class="h-12 flex items-end gap-1 px-3 py-1 bg-purple-900/60 border border-purple-700/60 rounded-xl">
+                        <div class="eq-bar"></div>
+                        <div class="eq-bar"></div>
+                        <div class="eq-bar"></div>
+                        <div class="eq-bar"></div>
+                        <div class="eq-bar"></div>
+                        <div class="eq-bar"></div>
+                    </div>
+                </div>
+
+                <!-- Live Voice Speech Transcript Display -->
+                <div class="w-full bg-slate-950/70 border border-purple-500/40 rounded-xl px-4 py-2 text-center min-h-[42px] flex items-center justify-center">
+                    <span id="transcriptLabel" class="text-xs text-purple-400 mr-2 font-medium">Heard Voice:</span>
+                    <span id="liveTranscript" class="text-amber-300 font-extrabold text-lg tracking-wider">"..."</span>
+                </div>
+            </div>
+
+            <!-- Fallback Tile Slots (Used when switched to Manual or as Voice Visualizer) -->
+            <div id="dropZoneContainer" class="w-full flex flex-col items-center gap-2 mt-1">
+                <div class="text-xs uppercase tracking-widest text-purple-300 font-semibold flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+                    <span>Target Word Phonemes</span>
+                </div>
+                <div id="slotsContainer" class="flex flex-wrap justify-center gap-2 sm:gap-3 p-2 sm:p-3 bg-purple-900/40 border border-purple-700/40 rounded-2xl min-h-[75px] w-full items-center">
+                    <!-- Target Phoneme slots dynamically built -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Cauldron Animation Area -->
+        <div class="relative flex flex-col items-center">
+            <!-- Cauldron Illustration -->
+            <div class="relative w-44 h-36 sm:w-52 sm:h-44 flex items-center justify-center cauldron-glow">
+                
+                <!-- Bubbles Floating Up -->
+                <div id="bubbleContainer" class="absolute top-2 w-28 h-10 pointer-events-none overflow-hidden"></div>
+
+                <!-- SVG Cauldron -->
+                <svg viewBox="0 0 200 160" class="w-full h-full drop-shadow-2xl">
+                    <ellipse cx="100" cy="40" rx="75" ry="18" fill="#a855f7" class="animate-pulse" />
+                    <ellipse cx="100" cy="40" rx="68" ry="14" fill="#22c55e" id="cauldronLiquid" />
+                    <path d="M 20 40 Q 100 25 180 40 Q 100 55 20 40 Z" fill="#334155" stroke="#475569" stroke-width="3"/>
+                    <path d="M 25 42 C 10 90, 20 140, 100 145 C 180 140, 190 90, 175 42 Z" fill="#1e293b" stroke="#334155" stroke-width="4"/>
+                    <path d="M 40 60 Q 30 90 45 120" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+                    <circle cx="100" cy="90" r="16" fill="#334155" stroke="#eab308" stroke-width="2"/>
+                    <path d="M 100 80 L 104 87 L 111 88 L 106 93 L 107 100 L 100 96 L 93 100 L 94 93 L 89 88 L 96 87 Z" fill="#eab308"/>
+                </svg>
+            </div>
+
+            <!-- Action Buttons Row -->
+            <div class="flex items-center gap-3 mt-1">
+                <!-- Pronounce Target Word Button -->
+                <button id="btnListenTarget" class="bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 border border-indigo-500/50 p-2.5 px-3 rounded-2xl shadow-lg transition flex items-center gap-2 group text-xs sm:text-sm">
+                    <i class="fa-solid fa-volume-high text-amber-400 group-hover:scale-125 transition"></i>
+                    <span class="font-semibold">Hear Model</span>
+                </button>
+
+                <!-- Hint Button -->
+                <button id="btnHint" class="bg-purple-900/80 hover:bg-purple-800 text-purple-200 border border-purple-500/50 p-2.5 px-3 rounded-2xl shadow-lg transition flex items-center gap-2 text-xs sm:text-sm">
+                    <i class="fa-solid fa-lightbulb text-amber-400"></i>
+                    <span class="font-semibold">Phonic Hint</span>
+                </button>
+
+                <!-- Cast Spell Button (For Tile Drag Mode) -->
+                <button id="btnCastSpell" disabled class="hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 opacity-50 cursor-not-allowed text-slate-950 font-bold px-5 py-2.5 rounded-2xl shadow-lg text-sm flex items-center gap-2 border-2 border-emerald-300">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Stir Spell</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Available Phoneme Tile Rack (Visible in Tile Drag Mode) -->
+        <div id="rackContainer" class="w-full max-w-xl hidden flex-col items-center gap-2">
+            <span class="text-xs uppercase tracking-widest text-purple-300 font-semibold">Drag Phonic Ingredients</span>
+            <div id="phonemeRack" class="flex flex-wrap justify-center gap-2 sm:gap-3 p-3 bg-slate-900/60 border border-purple-500/30 rounded-2xl min-h-[75px] w-full items-center backdrop-blur-md">
+                <!-- Dynamic Tiles -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer Status Bar -->
+    <footer class="relative z-10 p-3 bg-purple-950/80 border-t border-purple-800/50 text-center text-xs text-purple-300 flex justify-between items-center max-w-5xl mx-auto w-full rounded-t-2xl">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-microphone-lines text-amber-400"></i>
+            <span>Voice Engine: <strong id="speechEngineStatus" class="text-emerald-400">Initializing...</strong></span>
+        </div>
+        <div>
+            <span>Voice Magic Phonics ✨</span>
+        </div>
+    </footer>
+
+    <!-- SUCCESS MODAL -->
+    <div id="successModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 modal-blur hidden">
+        <div class="parchment-bg border-4 border-amber-500 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl relative animate-float">
+            
+            <div class="absolute -top-12 left-1/2 -translate-x-1/2 bg-amber-400 text-purple-950 w-20 h-20 rounded-full border-4 border-purple-900 flex items-center justify-center text-4xl shadow-lg">
+                ✨
+            </div>
+
+            <h2 class="font-magic text-3xl font-bold text-amber-900 mt-6 mb-1">Spell Casted!</h2>
+            <p class="text-purple-900 text-sm font-medium mb-3">You spoke and blended the magic word correctly!</p>
+
+            <!-- Word Graphic & Text -->
+            <div id="modalWordGraphic" class="text-7xl my-2 py-3 bg-amber-200/50 rounded-2xl border border-amber-400 flex justify-center items-center shadow-inner">
+                🐱
+            </div>
+
+            <h3 id="modalWordText" class="text-4xl font-extrabold tracking-wider text-purple-950 uppercase mb-4">
+                CAT
+            </h3>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col gap-2">
+                <button id="btnRepeatWord" class="w-full py-2 bg-purple-800 hover:bg-purple-900 text-amber-200 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-purple-600">
+                    <i class="fa-solid fa-volume-high text-amber-400"></i>
+                    <span>Hear Pronunciation</span>
+                </button>
+
+                <button id="btnNextWord" class="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-purple-950 font-bold text-lg rounded-2xl shadow-xl border-2 border-amber-200 transition">
+                    Next Magic Word <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SPELLBOOK CODEX MODAL -->
+    <div id="spellbookModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 modal-blur hidden">
+        <div class="parchment-bg border-4 border-amber-600 rounded-3xl p-6 max-w-lg w-full h-[80vh] flex flex-col shadow-2xl relative">
+            
+            <button id="btnCloseBook" class="absolute top-4 right-4 text-purple-950 hover:text-red-700 text-2xl w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center border border-amber-400">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="flex items-center gap-3 mb-4">
+                <i class="fa-solid fa-book-skull text-3xl text-purple-900"></i>
+                <div>
+                    <h2 class="font-magic text-2xl font-bold text-amber-950">Spellcaster's Codex</h2>
+                    <p class="text-xs text-purple-900">Mastered Voice Spells</p>
+                </div>
+            </div>
+
+            <div id="codexList" class="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-3 p-2 bg-amber-100/60 rounded-2xl border border-amber-300">
+                <!-- Cards added dynamically -->
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-amber-400/60 flex justify-between items-center text-xs text-purple-950">
+                <span>Total Words Unlocked: <strong id="unlockedCount" class="text-purple-900 font-extrabold">0</strong></span>
+                <button id="btnClearProgress" class="text-red-700 hover:underline font-bold">Reset Progress</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME JAVASCRIPT -->
+    <script>
+        /* ==========================================================================
+           1. WORD DATABASE & PHONEMES
+           ========================================================================== */
+        const WORD_DATABASE = {
+            1: [ // CVC Words
+                { word: "CAT", phonemes: ["C", "A", "T"], icon: "🐱", speak: "cat", alternates: ["kat", "cut"] },
+                { word: "DOG", phonemes: ["D", "O", "G"], icon: "🐶", speak: "dog", alternates: ["dock"] },
+                { word: "SUN", phonemes: ["S", "U", "N"], icon: "☀️", speak: "sun", alternates: ["son"] },
+                { word: "BED", phonemes: ["B", "E", "D"], icon: "🛏️", speak: "bed", alternates: ["bad"] },
+                { word: "PIG", phonemes: ["P", "I", "G"], icon: "🐷", speak: "pig", alternates: ["peg"] },
+                { word: "RUN", phonemes: ["R", "U", "N"], icon: "🏃", speak: "run", alternates: ["ran"] },
+                { word: "HAT", phonemes: ["H", "A", "T"], icon: "🎩", speak: "hat", alternates: ["hut"] },
+                { word: "FOX", phonemes: ["F", "O", "X"], icon: "🦊", speak: "fox", alternates: ["folks"] },
+                { word: "BUG", phonemes: ["B", "U", "G"], icon: "🐛", speak: "bug", alternates: ["bag"] }
+            ],
+            2: [ // Digraphs & Blends
+                { word: "SHIP", phonemes: ["SH", "I", "P"], icon: "🚢", speak: "ship", alternates: ["sheep"] },
+                { word: "FISH", phonemes: ["F", "I", "SH"], icon: "🐟", speak: "fish", alternates: ["phish"] },
+                { word: "FROG", phonemes: ["FR", "O", "G"], icon: "🐸", speak: "frog", alternates: ["phrog"] },
+                { word: "STAR", phonemes: ["ST", "A", "R"], icon: "⭐", speak: "star", alternates: ["starr"] },
+                { word: "DUCK", phonemes: ["D", "U", "CK"], icon: "🦆", speak: "duck", alternates: ["doc"] },
+                { word: "RING", phonemes: ["R", "I", "NG"], icon: "💍", speak: "ring", alternates: ["wring"] }
+            ],
+            3: [ // Magic E Vowels
+                { word: "CAKE", phonemes: ["C", "A", "K", "E"], icon: "🎂", speak: "cake", alternates: ["kake"] },
+                { word: "BONE", phonemes: ["B", "O", "N", "E"], icon: "🦴", speak: "bone", alternates: ["boan"] },
+                { word: "KITE", phonemes: ["K", "I", "T", "E"], icon: "🪁", speak: "kite", alternates: ["kyte"] },
+                { word: "ROSE", phonemes: ["R", "O", "S", "E"], icon: "🌹", speak: "rose", alternates: ["rows"] },
+                { word: "BOAT", phonemes: ["B", "OA", "T"], icon: "⛵", speak: "boat", alternates: ["bote"] }
+            ],
+            4: [ // Master Wizard
+                { word: "WIZARD", phonemes: ["WI", "Z", "ARD"], icon: "🧙‍♂️", speak: "wizard", alternates: ["visard"] },
+                { word: "MAGIC", phonemes: ["MA", "G", "IC"], icon: "🪄", speak: "magic", alternates: ["majic"] },
+                { word: "DRAGON", phonemes: ["DRA", "G", "ON"], icon: "🐉", speak: "dragon", alternates: ["dragun"] }
+            ]
+        };
+
+        const DISTRACTOR_PHONEMES = ["M", "T", "S", "L", "P", "B", "SH", "CH", "A", "E", "I", "O", "U"];
+
+        /* ==========================================================================
+           2. STATE & AUDIO SYSTEM
+           ========================================================================== */
+        let currentLevel = 1;
+        let currentWordObj = null;
+        let isVoiceMode = true;
+        let isListening = false;
+        let starsEarned = 0;
+        let unlockedCodex = new Set();
+        let currentSlots = [];
+        let draggedTile = null;
+
+        // Web Audio API Synth for Retro Magic Effects
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const synth = window.speechSynthesis;
+
+        function playSoundEffect(type) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            if (type === 'drop') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(280, now);
+                osc.frequency.exponentialRampToValueAtTime(550, now + 0.12);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                osc.start(now);
+                osc.stop(now + 0.12);
+            } else if (type === 'spell') {
+                const freqs = [523.25, 659.25, 783.99, 1046.50];
+                freqs.forEach((f, i) => {
+                    const subOsc = audioCtx.createOscillator();
+                    const subGain = audioCtx.createGain();
+                    subOsc.connect(subGain);
+                    subGain.connect(audioCtx.destination);
+                    subOsc.type = 'sine';
+                    subOsc.frequency.setValueAtTime(f, now + i * 0.08);
+                    subGain.gain.setValueAtTime(0.2, now + i * 0.08);
+                    subGain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.35);
+                    subOsc.start(now + i * 0.08);
+                    subOsc.stop(now + i * 0.08 + 0.35);
+                });
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(160, now);
+                osc.frequency.linearRampToValueAtTime(100, now + 0.25);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+        }
+
+        function speakPhoneme(text, rate = 0.85) {
+            if (!synth) return;
+            synth.cancel();
+            const utterance = new SpeechSynthesisUtterance(text.toLowerCase());
+            utterance.rate = rate;
+            utterance.pitch = 1.15;
+            const voices = synth.getVoices();
+            const englishVoice = voices.find(v => v.lang.startsWith('en'));
+            if (englishVoice) utterance.voice = englishVoice;
+            synth.speak(utterance);
+        }
+
+        /* ==========================================================================
+           3. WEB SPEECH RECOGNITION SYSTEM
+           ========================================================================== */
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+
+        function initSpeechRecognition() {
+            const statusEl = document.getElementById('speechEngineStatus');
+            const supportLabel = document.getElementById('speechSupportStatus');
+
+            if (!SpeechRecognition) {
+                statusEl.textContent = "Voice API Not Supported";
+                statusEl.className = "text-red-400";
+                supportLabel.textContent = "(Browser speech API missing - using tile fallback)";
+                switchMode(false); // Fallback to tile mode
+                return;
+            }
+
+            try {
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                recognition.onstart = () => {
+                    isListening = true;
+                    updateMicUI(true);
+                    document.getElementById('liveTranscript').textContent = "Listening...";
+                    startEqualizerAnimation();
+                };
+
+                recognition.onresult = (event) => {
+                    let interimTranscript = '';
+                    let finalTranscript = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        const transcriptText = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcriptText;
+                        } else {
+                            interimTranscript += transcriptText;
+                        }
+                    }
+
+                    const currentText = (finalTranscript || interimTranscript).trim().toLowerCase();
+                    if (currentText) {
+                        document.getElementById('liveTranscript').textContent = `"${currentText}"`;
+                        spawnMagicSparks();
+                    }
+
+                    if (finalTranscript) {
+                        evaluateSpokenWord(finalTranscript.trim().toLowerCase());
+                    }
+                };
+
+                recognition.onerror = (event) => {
+                    console.warn("Speech recognition error:", event.error);
+                    stopListening();
+                    document.getElementById('liveTranscript').textContent = `"Try again!"`;
+                    document.getElementById('wizardSpeech').textContent = `"I couldn't quite catch that spell! Tap the Mic and speak clearly."`;
+                };
+
+                recognition.onend = () => {
+                    stopListening();
+                };
+
+                statusEl.textContent = "Active & Ready";
+                statusEl.className = "text-emerald-400";
+
+            } catch (err) {
+                console.error("Speech Init Error:", err);
+                statusEl.textContent = "Error Loading";
+                statusEl.className = "text-rose-400";
+            }
+        }
+
+        function toggleSpeechRecognition() {
+            if (!recognition) {
+                alert("Speech recognition is not supported on this browser. You can play using Tile Drag mode!");
+                return;
+            }
+
+            if (isListening) {
+                recognition.stop();
+            } else {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    recognition.stop();
+                }
+            }
+        }
+
+        function stopListening() {
+            isListening = false;
+            updateMicUI(false);
+            stopEqualizerAnimation();
+        }
+
+        function updateMicUI(listening) {
+            const btnMic = document.getElementById('btnMic');
+            if (listening) {
+                btnMic.classList.add('mic-listening', 'from-red-600', 'to-amber-500');
+                btnMic.innerHTML = `<i class="fa-solid fa-microphone-lines text-amber-200 animate-pulse"></i>`;
+            } else {
+                btnMic.classList.remove('mic-listening');
+                btnMic.innerHTML = `<i class="fa-solid fa-microphone"></i>`;
+            }
+        }
+
+        /* ==========================================================================
+           4. VOICE ACCURACY EVALUATION & BLENDING LOGIC
+           ========================================================================== */
+        function evaluateSpokenWord(spokenText) {
+            if (!currentWordObj) return;
+
+            const targetWord = currentWordObj.word.toLowerCase();
+            const targetPhonemesJoined = currentWordObj.phonemes.join('').toLowerCase();
+            const altList = currentWordObj.alternates ? currentWordObj.alternates.map(a => a.toLowerCase()) : [];
+
+            // Clean spoken text punctuation
+            const cleanSpoken = spokenText.replace(/[^a-zA-Z]/g, '');
+
+            // Check if matches full word, phoneme blend, or phonetically close sound
+            const isExactMatch = cleanSpoken === targetWord || cleanSpoken === targetPhonemesJoined;
+            const isAlternateMatch = altList.includes(cleanSpoken);
+            const isPartialPhonemeMatch = checkPhonemeSequenceMatch(cleanSpoken, currentWordObj.phonemes);
+
+            if (isExactMatch || isAlternateMatch || isPartialPhonemeMatch) {
+                // SUCCESS VOICE BLEND
+                fillSlotsWithSuccess();
+                playSoundEffect('spell');
+                triggerCauldronSuccess();
+
+                document.getElementById('wizardSpeech').textContent = `"Magnificent! Your voice blended '${currentWordObj.word}' perfectly!"`;
+                
+                starsEarned += 10;
+                document.getElementById('starCount').textContent = starsEarned;
+                unlockedCodex.add(currentWordObj.word);
+                saveProgress();
+
+                setTimeout(() => {
+                    showSuccessModal();
+                }, 800);
+
+            } else {
+                // FAILED / PARTIAL MATCH
+                playSoundEffect('wrong');
+                document.getElementById('wizardSpeech').textContent = `"Close! You said '${spokenText}', but the magic word is '${currentWordObj.word}'. Hear the target and try again!"`;
+                document.getElementById('slotsContainer').classList.add('animate-shake');
+                setTimeout(() => document.getElementById('slotsContainer').classList.remove('animate-shake'), 500);
+            }
+        }
+
+        function checkPhonemeSequenceMatch(spoken, phonemes) {
+            // Check if spoken contains all sequence sounds
+            let matchedCount = 0;
+            phonemes.forEach(ph => {
+                if (spoken.includes(ph.toLowerCase())) {
+                    matchedCount++;
+                }
+            });
+            return matchedCount >= phonemes.length;
+        }
+
+        function fillSlotsWithSuccess() {
+            currentSlots = [...currentWordObj.phonemes];
+            renderSlots();
+        }
+
+        /* ==========================================================================
+           5. GAME WORKFLOW & DOM HANDLERS
+           ========================================================================== */
+        const levelSelect = document.getElementById('levelSelect');
+        const slotsContainer = document.getElementById('slotsContainer');
+        const phonemeRack = document.getElementById('phonemeRack');
+        const btnMic = document.getElementById('btnMic');
+        const btnToggleMode = document.getElementById('btnToggleMode');
+        const btnListenTarget = document.getElementById('btnListenTarget');
+        const btnHint = document.getElementById('btnHint');
+        const btnCastSpell = document.getElementById('btnCastSpell');
+        
+        const successModal = document.getElementById('successModal');
+        const modalWordGraphic = document.getElementById('modalWordGraphic');
+        const modalWordText = document.getElementById('modalWordText');
+        const btnNextWord = document.getElementById('btnNextWord');
+        const btnRepeatWord = document.getElementById('btnRepeatWord');
+
+        const spellbookModal = document.getElementById('spellbookModal');
+        const btnOpenBook = document.getElementById('btnOpenBook');
+        const btnCloseBook = document.getElementById('btnCloseBook');
+        const codexList = document.getElementById('codexList');
+        const unlockedCountEl = document.getElementById('unlockedCount');
+        const btnClearProgress = document.getElementById('btnClearProgress');
+
+        function initGame() {
+            loadProgress();
+            createBubbles();
+            initParticleCanvas();
+            initSpeechRecognition();
+
+            loadWordForLevel();
+
+            // Handlers
+            levelSelect.addEventListener('change', (e) => {
+                currentLevel = parseInt(e.target.value);
+                loadWordForLevel();
+            });
+
+            btnMic.addEventListener('click', toggleSpeechRecognition);
+
+            btnToggleMode.addEventListener('click', () => {
+                switchMode(!isVoiceMode);
+            });
+
+            btnListenTarget.addEventListener('click', () => {
+                speakPhoneme(currentWordObj.speak, 0.7);
+            });
+
+            btnHint.addEventListener('click', giveHint);
+            btnCastSpell.addEventListener('click', checkManualTileBlend);
+
+            btnNextWord.addEventListener('click', () => {
+                successModal.classList.add('hidden');
+                loadWordForLevel();
+            });
+
+            btnRepeatWord.addEventListener('click', () => {
+                speakPhoneme(currentWordObj.speak, 0.7);
+            });
+
+            btnOpenBook.addEventListener('click', openCodex);
+            btnCloseBook.addEventListener('click', () => spellbookModal.classList.add('hidden'));
+            btnClearProgress.addEventListener('click', clearProgress);
+        }
+
+        function switchMode(voiceMode) {
+            isVoiceMode = voiceMode;
+            const modeBadge = document.getElementById('modeBadge');
+            const voiceSection = document.getElementById('voiceControlSection');
+            const rackContainer = document.getElementById('rackContainer');
+
+            if (isVoiceMode) {
+                modeBadge.innerHTML = `<i class="fa-solid fa-microphone mr-1"></i> Voice Mode`;
+                modeBadge.className = "bg-amber-400 text-purple-950 text-xs font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider";
+                btnToggleMode.innerHTML = `<i class="fa-solid fa-hand mr-1"></i> Switch to Tile Drag`;
+                voiceSection.classList.remove('hidden');
+                rackContainer.classList.add('hidden');
+                btnCastSpell.classList.add('hidden');
+                document.getElementById('wizardSpeech').textContent = `"Voice Mode active! Tap the Magic Mic and say '${currentWordObj.word}'!"`;
+            } else {
+                modeBadge.innerHTML = `<i class="fa-solid fa-hand mr-1"></i> Tile Drag Mode`;
+                modeBadge.className = "bg-purple-600 text-amber-200 text-xs font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider";
+                btnToggleMode.innerHTML = `<i class="fa-solid fa-microphone mr-1"></i> Switch to Voice Mode`;
+                voiceSection.classList.add('hidden');
+                rackContainer.classList.remove('hidden');
+                rackContainer.classList.add('flex');
+                btnCastSpell.classList.remove('hidden');
+                document.getElementById('wizardSpeech').textContent = `"Tile Mode active! Drag the phonemes into slots to spell '${currentWordObj.word}'."`;
+            }
+            
+            currentSlots = new Array(currentWordObj.phonemes.length).fill(null);
+            renderSlots();
+            renderRack();
+        }
+
+        function loadWordForLevel() {
+            const list = WORD_DATABASE[currentLevel] || WORD_DATABASE[1];
+            currentWordObj = list[Math.floor(Math.random() * list.length)];
+            currentSlots = new Array(currentWordObj.phonemes.length).fill(null);
+
+            document.getElementById('liveTranscript').textContent = '"..."';
+
+            if (isVoiceMode) {
+                document.getElementById('wizardSpeech').textContent = `"Speak '${currentWordObj.word}' into the cauldron! Tap the Magic Mic."`;
+            } else {
+                document.getElementById('wizardSpeech').textContent = `"Drag phonemes into slots to spell '${currentWordObj.word}'."`;
+            }
+
+            renderSlots();
+            renderRack();
+            updateCastBtnState();
+        }
+
+        function renderSlots() {
+            slotsContainer.innerHTML = '';
+            currentWordObj.phonemes.forEach((ph, idx) => {
+                const slot = document.createElement('div');
+                slot.className = `slot-target w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center relative transition-all`;
+                slot.dataset.index = idx;
+
+                slot.addEventListener('dragover', (e) => { e.preventDefault(); slot.classList.add('drag-over'); });
+                slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+                slot.addEventListener('drop', (e) => handleDrop(e, idx));
+                slot.addEventListener('click', () => handleSlotClick(idx));
+
+                if (currentSlots[idx]) {
+                    const tile = createTileElement(currentSlots[idx], false);
+                    slot.appendChild(tile);
+                } else {
+                    // Show phoneme outline placeholder in Voice Mode as guidance
+                    if (isVoiceMode) {
+                        const placeholder = document.createElement('span');
+                        placeholder.className = "text-purple-400/40 text-lg font-bold uppercase";
+                        placeholder.textContent = ph;
+                        slot.appendChild(placeholder);
+                    }
+                }
+
+                slotsContainer.appendChild(slot);
+            });
+        }
+
+        function renderRack() {
+            phonemeRack.innerHTML = '';
+            let tilesData = [...currentWordObj.phonemes];
+            
+            while (tilesData.length < currentWordObj.phonemes.length + 3) {
+                const randomDist = DISTRACTOR_PHONEMES[Math.floor(Math.random() * DISTRACTOR_PHONEMES.length)];
+                if (!tilesData.includes(randomDist)) {
+                    tilesData.push(randomDist);
+                }
+            }
+            tilesData.sort(() => Math.random() - 0.5);
+
+            tilesData.forEach((ph) => {
+                const isPlaced = currentSlots.includes(ph);
+                const tileEl = createTileElement(ph, true);
+                if (isPlaced) {
+                    tileEl.classList.add('opacity-30', 'pointer-events-none');
+                }
+                phonemeRack.appendChild(tileEl);
+            });
+        }
+
+        function createTileElement(phoneme, isRack = true) {
+            const tile = document.createElement('div');
+            tile.className = `tile-grab bg-gradient-to-b from-purple-600 to-indigo-800 border-2 border-amber-300 text-amber-200 font-extrabold text-xl sm:text-2xl rounded-2xl w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center select-none shadow-lg cursor-pointer transform hover:scale-105 transition`;
+            tile.textContent = phoneme;
+            tile.draggable = true;
+
+            tile.addEventListener('click', (e) => {
+                e.stopPropagation();
+                speakPhoneme(phoneme);
+                if (!isVoiceMode && isRack) {
+                    const emptyIdx = currentSlots.indexOf(null);
+                    if (emptyIdx !== -1) {
+                        placeTileInSlot(phoneme, emptyIdx);
+                    }
+                }
+            });
+
+            tile.addEventListener('dragstart', (e) => {
+                draggedTile = phoneme;
+                e.dataTransfer.setData('text/plain', phoneme);
+            });
+
+            return tile;
+        }
+
+        function handleDrop(e, slotIdx) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            const phoneme = e.dataTransfer.getData('text/plain') || draggedTile;
+            if (phoneme) placeTileInSlot(phoneme, slotIdx);
+        }
+
+        function placeTileInSlot(phoneme, slotIdx) {
+            playSoundEffect('drop');
+            speakPhoneme(phoneme);
+            currentSlots[slotIdx] = phoneme;
+            renderSlots();
+            renderRack();
+            updateCastBtnState();
+        }
+
+        function handleSlotClick(slotIdx) {
+            if (!isVoiceMode && currentSlots[slotIdx]) {
+                playSoundEffect('drop');
+                currentSlots[slotIdx] = null;
+                renderSlots();
+                renderRack();
+                updateCastBtnState();
+            }
+        }
+
+        function updateCastBtnState() {
+            const isFull = currentSlots.every(s => s !== null);
+            if (isFull && !isVoiceMode) {
+                btnCastSpell.disabled = false;
+                btnCastSpell.classList.remove('opacity-50', 'cursor-not-allowed');
+                btnCastSpell.classList.add('animate-bounce');
+            } else {
+                btnCastSpell.disabled = true;
+                btnCastSpell.classList.add('opacity-50', 'cursor-not-allowed');
+                btnCastSpell.classList.remove('animate-bounce');
+            }
+        }
+
+        function checkManualTileBlend() {
+            const assembled = currentSlots.join('');
+            const target = currentWordObj.phonemes.join('');
+
+            if (assembled === target) {
+                playSoundEffect('spell');
+                triggerCauldronSuccess();
+                speakPhoneme(currentWordObj.speak, 0.7);
+
+                starsEarned += 10;
+                document.getElementById('starCount').textContent = starsEarned;
+                unlockedCodex.add(currentWordObj.word);
+                saveProgress();
+
+                setTimeout(showSuccessModal, 800);
+            } else {
+                playSoundEffect('wrong');
+                document.getElementById('wizardSpeech').textContent = `"Those phonemes fizzled! Try rearranging them."`;
+                slotsContainer.classList.add('animate-shake');
+                setTimeout(() => slotsContainer.classList.remove('animate-shake'), 500);
+            }
+        }
+
+        function giveHint() {
+            let targetIdx = -1;
+            for (let i = 0; i < currentWordObj.phonemes.length; i++) {
+                if (currentSlots[i] !== currentWordObj.phonemes[i]) {
+                    targetIdx = i;
+                    break;
+                }
+            }
+
+            if (targetIdx !== -1) {
+                const correctPh = currentWordObj.phonemes[targetIdx];
+                document.getElementById('wizardSpeech').textContent = `"Phonic Hint: Sound #${targetIdx + 1} is '${correctPh}'!"`;
+                speakPhoneme(correctPh);
+
+                const slotEl = slotsContainer.children[targetIdx];
+                if (slotEl) {
+                    slotEl.classList.add('ring-4', 'ring-amber-400');
+                    setTimeout(() => slotEl.classList.remove('ring-4', 'ring-amber-400'), 1500);
+                }
+            }
+        }
+
+        function showSuccessModal() {
+            modalWordGraphic.textContent = currentWordObj.icon;
+            modalWordText.textContent = currentWordObj.word;
+            successModal.classList.remove('hidden');
+
+            confetti({
+                particleCount: 90,
+                spread: 80,
+                origin: { y: 0.6 }
+            });
+        }
+
+        /* ==========================================================================
+           6. EQUALIZER & CANVAS MAGIC PARTICLES
+           ========================================================================== */
+        let eqInterval = null;
+
+        function startEqualizerAnimation() {
+            const eqBars = document.querySelectorAll('.eq-bar');
+            eqInterval = setInterval(() => {
+                eqBars.forEach(bar => {
+                    const randomH = Math.floor(Math.random() * 32) + 6;
+                    bar.style.height = `${randomH}px`;
+                });
+            }, 100);
+        }
+
+        function stopEqualizerAnimation() {
+            if (eqInterval) clearInterval(eqInterval);
+            const eqBars = document.querySelectorAll('.eq-bar');
+            eqBars.forEach(bar => bar.style.height = `6px`);
+        }
+
+        // Particle Canvas
+        let canvas, ctx, particles = [];
+
+        function initParticleCanvas() {
+            canvas = document.getElementById('magicParticleCanvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            for (let i = 0; i < 40; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 2.5 + 1,
+                    alpha: Math.random(),
+                    speedY: Math.random() * -0.5 - 0.2,
+                    color: ['#facc15', '#a855f7', '#ec4899', '#3b82f6'][Math.floor(Math.random() * 4)]
+                });
+            }
+            animateParticles();
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.y += p.speedY;
+                if (p.y < 0) p.y = canvas.height;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.alpha;
+                ctx.fill();
+            });
+            requestAnimationFrame(animateParticles);
+        }
+
+        function spawnMagicSparks() {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: canvas.width / 2 + (Math.random() * 100 - 50),
+                    y: canvas.height / 2 + (Math.random() * 100 - 50),
+                    radius: Math.random() * 4 + 2,
+                    alpha: 1,
+                    speedY: Math.random() * -2 - 1,
+                    color: '#facc15'
+                });
+            }
+        }
+
+        function triggerCauldronSuccess() {
+            const liquid = document.getElementById('cauldronLiquid');
+            liquid.setAttribute('fill', '#facc15');
+            setTimeout(() => liquid.setAttribute('fill', '#22c55e'), 1500);
+        }
+
+        function createBubbles() {
+            const container = document.getElementById('bubbleContainer');
+            for (let i = 0; i < 6; i++) {
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble-particle';
+                const size = Math.random() * 12 + 6;
+                bubble.style.width = `${size}px`;
+                bubble.style.height = `${size}px`;
+                bubble.style.left = `${Math.random() * 80 + 10}%`;
+                bubble.style.animationDelay = `${Math.random() * 2}s`;
+                container.appendChild(bubble);
+            }
+        }
+
+        /* ==========================================================================
+           7. CODEX & LOCALSTORAGE
+           ========================================================================== */
+        function openCodex() {
+            codexList.innerHTML = '';
+            let allWords = [];
+            Object.values(WORD_DATABASE).forEach(list => allWords.push(...list));
+
+            allWords.forEach(item => {
+                const isUnlocked = unlockedCodex.has(item.word);
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-xl border text-center flex flex-col items-center justify-center transition ${
+                    isUnlocked 
+                        ? 'bg-amber-200/80 border-amber-500 text-purple-950 font-bold' 
+                        : 'bg-amber-100/30 border-amber-300/40 text-amber-800/40 opacity-60'
+                }`;
+
+                card.innerHTML = `
+                    <span class="text-3xl mb-1">${isUnlocked ? item.icon : '🔒'}</span>
+                    <span class="font-bold text-xs sm:text-sm tracking-wide">${isUnlocked ? item.word : '???'}</span>
+                `;
+
+                if (isUnlocked) {
+                    card.classList.add('cursor-pointer', 'hover:scale-105');
+                    card.addEventListener('click', () => speakPhoneme(item.speak));
+                }
+
+                codexList.appendChild(card);
+            });
+
+            unlockedCountEl.textContent = unlockedCodex.size;
+            spellbookModal.classList.remove('hidden');
+        }
+
+        function saveProgress() {
+            localStorage.setItem('phonics_stars_v2', starsEarned);
+            localStorage.setItem('phonics_codex_v2', JSON.stringify(Array.from(unlockedCodex)));
+        }
+
+        function loadProgress() {
+            const savedStars = localStorage.getItem('phonics_stars_v2');
+            const savedCodex = localStorage.getItem('phonics_codex_v2');
+            if (savedStars) {
+                starsEarned = parseInt(savedStars);
+                document.getElementById('starCount').textContent = starsEarned;
+            }
+            if (savedCodex) {
+                unlockedCodex = new Set(JSON.parse(savedCodex));
+            }
+        }
+
+        function clearProgress() {
+            if (confirm("Reset all stars and unlocked words in your Spellbook?")) {
+                localStorage.removeItem('phonics_stars_v2');
+                localStorage.removeItem('phonics_codex_v2');
+                starsEarned = 0;
+                document.getElementById('starCount').textContent = 0;
+                unlockedCodex.clear();
+                openCodex();
+            }
+        }
+
+        // Initialize App on Window Load
+        window.onload = initGame;
+    </script>
+</body>
+</html>
